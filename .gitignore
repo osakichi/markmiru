@@ -1,3 +1,10 @@
 build/bin
+build/README.md
 node_modules
 frontend/dist
+frontend/wailsjs
+frontend/package.json.md5
+frontend/README.md
+frontend/.vscode
+frontend/src/assets/fonts/
+frontend/src/assets/images/

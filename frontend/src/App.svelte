@@ -1,0 +1,121 @@
+<script lang="ts">
+  import { onMount } from 'svelte'
+  import TabBar from './lib/components/TabBar.svelte'
+  import Toolbar from './lib/components/Toolbar.svelte'
+  import OpenFilesList from './lib/components/OpenFilesList.svelte'
+  import ConfirmDialog from './lib/components/ConfirmDialog.svelte'
+  import SettingsPanel from './lib/components/SettingsPanel.svelte'
+  import Preview from './lib/components/Preview.svelte'
+  import Editor from './lib/components/Editor.svelte'
+  import { tabsStore } from './lib/stores/tabs.svelte'
+  import { isDirty } from './lib/stores/tabs'
+  import { uiStore } from './lib/stores/ui.svelte'
+  import { registerMenuHandlers } from './lib/menu'
+  import { setDirtyState } from './lib/api/wails'
+  import { restoreSession, currentConfig, schedulePersist } from './lib/commands'
+  import { styleStore } from './lib/style/style.svelte'
+  import { applyHighlightTheme } from './lib/style/highlight'
+
+  const active = $derived(tabsStore.active)
+
+  // ネイティブメニュー/ショートカットのイベント購読（解除は onMount の戻り値で）
+  onMount(() => registerMenuHandlers())
+
+  // 起動時に前回セッションを復元（復元中は設定保存を抑止）
+  onMount(async () => {
+    uiStore.restoring = true
+    try {
+      await restoreSession()
+    } finally {
+      uiStore.restoring = false
+    }
+  })
+
+  // 未保存の有無を Go に通知（終了時の確認ループ起動判定に使用）
+  $effect(() => {
+    const hasUnsaved = tabsStore.tabs.some((t) => isDirty(t))
+    void setDirtyState(hasUnsaved)
+  })
+
+  // 設定（セッション・サイドバー状態・プロファイル）を永続化。復元中・終了中は抑止。デバウンス保存。
+  $effect(() => {
+    if (uiStore.restoring || uiStore.closing) return
+    schedulePersist(currentConfig())
+  })
+
+  // コードブロックのハイライトテーマをアクティブプロファイルの colorScheme に連動
+  $effect(() => {
+    applyHighlightTheme(styleStore.active.colorScheme)
+  })
+
+  // カスタム CSS（プロファイル）を style 要素へ反映
+  $effect(() => {
+    const css = styleStore.active.customCSS ?? ''
+    let el = document.getElementById('markmiru-custom-css') as HTMLStyleElement | null
+    if (!el) {
+      el = document.createElement('style')
+      el.id = 'markmiru-custom-css'
+      document.head.appendChild(el)
+    }
+    el.textContent = css
+  })
+
+  // 印刷モード（表示通り=配色再現 / 既定=印刷向け変換）を body クラスへ反映
+  $effect(() => {
+    document.body.classList.toggle('print-as-displayed', uiStore.printAsDisplayed)
+  })
+</script>
+
+<div class="app">
+  {#if uiStore.sidebarOpen}
+    <OpenFilesList />
+  {/if}
+  <div class="main">
+    <TabBar />
+    <Toolbar />
+    <div class="content">
+      {#if active}
+        {#if active.mode === 'view'}
+          <Preview source={active.content} />
+        {:else}
+          {#key active.id}
+            <Editor
+              value={active.content}
+              onChange={(v) => active && tabsStore.setContent(active.id, v)}
+            />
+          {/key}
+        {/if}
+      {:else}
+        <div class="empty">タブがありません。＋ または Ctrl+N で新規作成できます。</div>
+      {/if}
+    </div>
+  </div>
+</div>
+
+<ConfirmDialog />
+<SettingsPanel />
+
+<style>
+  .app {
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+  }
+  .main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .content {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .empty {
+    padding: 2rem;
+    color: #8b949e;
+  }
+</style>
