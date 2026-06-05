@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -11,9 +12,13 @@ import (
 
 // App struct
 type App struct {
-	ctx        context.Context
-	hasUnsaved atomic.Bool
-	quitting   atomic.Bool
+	ctx          context.Context
+	hasUnsaved   atomic.Bool
+	quitting     atomic.Bool
+	startupFiles []string   // コマンドライン引数のファイルパス（main から設定）
+	pendingMu    sync.Mutex // pendingFiles / frontReady を保護
+	pendingFiles []string   // フロント準備前に IPC 経由で届いたファイルパス
+	frontReady   bool       // GetPendingFiles 呼出後に true になる（pendingMu で保護）
 }
 
 // NewApp creates a new App application struct
@@ -25,6 +30,45 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+}
+
+// GetPendingFiles はフロントエンド初期化完了後に一度だけ呼ぶ。
+// 起動引数（コマンドライン）＋ IPC 早期受信ファイルをまとめて返し、内部リストをクリアする。
+// 呼出後は frontReady = true となり、以降の IPC ファイルはイベントで即時配信される。
+func (a *App) GetPendingFiles() []string {
+	a.pendingMu.Lock()
+	defer a.pendingMu.Unlock()
+	a.frontReady = true
+	all := make([]string, 0, len(a.startupFiles)+len(a.pendingFiles))
+	all = append(all, a.startupFiles...)
+	all = append(all, a.pendingFiles...)
+	a.startupFiles = nil
+	a.pendingFiles = nil
+	return all
+}
+
+// openFileFromIPC は IPC 経由で受け取ったパスをフロントへ渡す。
+// フロント準備前に届いた場合はキューに積み、準備完了後（GetPendingFiles 呼出後）はイベントで即時配信する。
+func (a *App) openFileFromIPC(path string) {
+	a.pendingMu.Lock()
+	if !a.frontReady {
+		a.pendingFiles = append(a.pendingFiles, path)
+		a.pendingMu.Unlock()
+		return
+	}
+	a.pendingMu.Unlock()
+	runtime.EventsEmit(a.ctx, "ipc:open-file", path)
+}
+
+// bringToFront はウィンドウを前面に表示する。IPC 受信時に呼ぶ。
+// runtime.WindowShow で表示状態を復元した後、Windows では Win32 の
+// SetForegroundWindow を呼ぶことでフォアグラウンドロックを越えて前面に出す。
+func (a *App) bringToFront() {
+	if a.ctx == nil {
+		return
+	}
+	runtime.WindowShow(a.ctx)
+	activateWindowWin32() // Windows: SetForegroundWindow; 他 OS: no-op
 }
 
 // emit はネイティブメニュー等からフロントへイベントを送る内部ヘルパ。
@@ -104,12 +148,17 @@ func (a *App) OpenFiles() ([]FileDoc, error) {
 }
 
 // ReadFile は指定パスを読み込み、FileDoc として返す（セッション復元・再読込用）。
+// 相対パスは絶対パスに変換してから返す。これにより openFromDoc の重複チェックが正しく機能する。
 func (a *App) ReadFile(path string) (FileDoc, error) {
-	data, err := os.ReadFile(path)
+	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return FileDoc{}, err
 	}
-	return newFileDoc(path, string(data)), nil
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return FileDoc{}, err
+	}
+	return newFileDoc(absPath, string(data)), nil
 }
 
 // SaveFileDialog は保存ダイアログを表示し、選択パスを返す（キャンセル時は空文字）。

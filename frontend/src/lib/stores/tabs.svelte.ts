@@ -49,7 +49,7 @@ class TabsStore {
     return tab
   }
 
-  /** 無題の新規ドキュメント（編集が目的なのでソースモードで開く）。 */
+  /** 無題の新規ドキュメント（編集が目的なので編集モードで開く）。 */
   newUntitled(): Tab {
     return this.open({ filePath: null, fileName: '無題', content: '', mode: 'source' })
   }

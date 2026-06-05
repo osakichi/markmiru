@@ -3,7 +3,7 @@
 import { EventsOn } from '../../wailsjs/runtime/runtime'
 import { tabsStore } from './stores/tabs.svelte'
 import { uiStore } from './stores/ui.svelte'
-import { openFiles, saveActive, saveActiveAs, requestQuit, printDocument } from './commands'
+import { openFiles, saveActive, saveActiveAs, requestQuit, printDocument, openFileByPath } from './commands'
 
 /** メニューイベントの購読を開始し、解除関数を返す。 */
 export function registerMenuHandlers(): () => void {
@@ -28,6 +28,10 @@ export function registerMenuHandlers(): () => void {
     EventsOn('menu:toggleSidebar', () => uiStore.toggleSidebar()),
     EventsOn('app:request-quit', () => {
       void requestQuit()
+    }),
+    // IPC 経由（後発インスタンスから転送）のファイルを開く
+    EventsOn('ipc:open-file', (path: string) => {
+      void openFileByPath(path)
     })
   ]
   return () => offs.forEach((off) => off())

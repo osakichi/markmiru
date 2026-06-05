@@ -8,7 +8,8 @@ import {
   SetDirtyState,
   Quit,
   LoadConfig,
-  SaveConfig
+  SaveConfig,
+  GetPendingFiles
 } from '../../../wailsjs/go/main/App'
 import type { main } from '../../../wailsjs/go/models'
 
@@ -69,4 +70,9 @@ export async function loadConfig(): Promise<AppConfig> {
 /** 設定を保存する。 */
 export async function saveConfig(cfg: AppConfig): Promise<void> {
   await SaveConfig(cfg as unknown as main.Config)
+}
+
+/** 起動引数・IPC 早期受信ファイルを取得する（フロントエンド初期化完了後に一度だけ呼ぶ）。 */
+export async function getPendingFiles(): Promise<string[]> {
+  return (await GetPendingFiles()) ?? []
 }

@@ -3,42 +3,55 @@
 package main
 
 import (
-	"os"
+	"net"
+	"syscall"
 	"unsafe"
-
-	"golang.org/x/sys/windows"
 )
 
-// singleInstanceMutex はプロセス終了まで保持し続ける必要があるためパッケージ変数に置く。
-var singleInstanceMutex windows.Handle
+var (
+	modUser32                    = syscall.NewLazyDLL("user32.dll")
+	procFindWindowW              = modUser32.NewProc("FindWindowW")
+	procShowWindow               = modUser32.NewProc("ShowWindow")
+	procSetForegroundWindow      = modUser32.NewProc("SetForegroundWindow")
+	procGetWindowThreadProcessId = modUser32.NewProc("GetWindowThreadProcessId")
+	procAllowSetForegroundWindow = modUser32.NewProc("AllowSetForegroundWindow")
+)
 
-// ensureSingleInstance は wails.Run より前に呼ぶことで、
-// 起動直後に多重起動をブロックする。
-func ensureSingleInstance() {
-	var err error
-	singleInstanceMutex, err = windows.CreateMutex(
-		nil, false,
-		windows.StringToUTF16Ptr("Markmiru-SingleInstance-c7f3e1b2"),
-	)
-	if err != windows.ERROR_ALREADY_EXISTS {
+func setSocketPerms(_ string) {}
+func verifyPeer(_ *net.UnixConn) bool { return true }
+
+// platformGrantForeground は後発インスタンスが終了前に呼ぶ。
+// 先発インスタンスの PID を特定し AllowSetForegroundWindow で許可を与えることで、
+// 先発が SetForegroundWindow を成功させられるようにする。
+func platformGrantForeground() {
+	titlePtr, err := syscall.UTF16PtrFromString("Markmiru")
+	if err != nil {
 		return
 	}
-	bringExistingToFront()
-	os.Exit(0)
+	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	if hwnd == 0 {
+		return
+	}
+	var pid uint32
+	procGetWindowThreadProcessId.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
+	if pid == 0 {
+		return
+	}
+	procAllowSetForegroundWindow.Call(uintptr(pid))
 }
 
-func bringExistingToFront() {
-	user32 := windows.NewLazySystemDLL("user32.dll")
-	findWindowW := user32.NewProc("FindWindowW")
-	showWindow := user32.NewProc("ShowWindow")
-	setForegroundWindow := user32.NewProc("SetForegroundWindow")
-
-	titlePtr, _ := windows.UTF16PtrFromString("Markmiru")
-	hwnd, _, _ := findWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+// activateWindowWin32 は先発インスタンスがウィンドウを前面に出すために呼ぶ。
+// AllowSetForegroundWindow で許可を受けた後に呼ぶことで SetForegroundWindow が成功する。
+func activateWindowWin32() {
+	titlePtr, err := syscall.UTF16PtrFromString("Markmiru")
+	if err != nil {
+		return
+	}
+	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd == 0 {
 		return
 	}
 	const swRestore = 9
-	showWindow.Call(hwnd, swRestore)
-	setForegroundWindow.Call(hwnd)
+	procShowWindow.Call(hwnd, swRestore)
+	procSetForegroundWindow.Call(hwnd)
 }

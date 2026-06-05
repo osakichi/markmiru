@@ -34,7 +34,7 @@ func buildMenu(app *App) *menu.Menu {
 	fileMenu.AddText("終了", keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) { runtime.Quit(app.ctx) })
 
 	viewMenu := appMenu.AddSubmenu("表示")
-	viewMenu.AddText("閲覧/ソース切替", keys.CmdOrCtrl("e"), func(_ *menu.CallbackData) { app.emit("menu:toggleMode") })
+	viewMenu.AddText("閲覧/編集切替", keys.CmdOrCtrl("e"), func(_ *menu.CallbackData) { app.emit("menu:toggleMode") })
 	viewMenu.AddText("サイドバー", keys.CmdOrCtrl("b"), func(_ *menu.CallbackData) { app.emit("menu:toggleSidebar") })
 
 	// 標準の編集メニュー（コピー/貼り付け等）
@@ -44,9 +44,14 @@ func buildMenu(app *App) *menu.Menu {
 }
 
 func main() {
-	ensureSingleInstance()
-
 	app := NewApp()
+
+	// 多重起動防止 + IPC。既存インスタンスへファイルを渡して終了する場合がある。
+	args := os.Args[1:]
+	if ensureSingleInstance(app, args) {
+		os.Exit(0)
+	}
+	app.startupFiles = args
 
 	configDir, _ := os.UserConfigDir()
 

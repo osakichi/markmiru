@@ -30,7 +30,8 @@ export interface StyleProfile {
   lineHeight: number
   color: string
   background: string
-  maxWidth: number // px
+  maxWidth: number    // px
+  maxWidthFull: boolean // true のときウィンドウ幅に追従（max-width: none）
 
   // 見出し（h1〜h6）
   headings: HeadingStyle[] // 長さ6（index0 = h1）
@@ -116,7 +117,7 @@ export function profileToVars(p: StyleProfile): Record<string, string> {
     '--md-line-height': `${p.lineHeight}`,
     '--md-color': p.color,
     '--md-bg': p.background,
-    '--md-max-width': `${p.maxWidth}px`,
+    '--md-max-width': p.maxWidthFull ? 'none' : `${p.maxWidth}px`,
     '--md-link-color': p.linkColor,
     '--md-link-deco': p.linkUnderline === 'always' ? 'underline' : 'none',
     '--md-link-deco-hover': p.linkUnderline === 'none' ? 'none' : 'underline',
@@ -173,6 +174,7 @@ export const PRESETS: StyleProfile[] = [
     color: '#24292f',
     background: '#ffffff',
     maxWidth: 820,
+    maxWidthFull: false,
     headings: defaultHeadings('#1f2328'),
     linkColor: '#0969da',
     linkUnderline: 'hover',
@@ -208,6 +210,7 @@ export const PRESETS: StyleProfile[] = [
     color: '#c9d1d9',
     background: '#0d1117',
     maxWidth: 820,
+    maxWidthFull: false,
     headings: defaultHeadings('#e6edf3'),
     linkColor: '#4493f8',
     linkUnderline: 'hover',
@@ -243,6 +246,7 @@ export const PRESETS: StyleProfile[] = [
     color: '#1f2328',
     background: '#ffffff',
     maxWidth: 980,
+    maxWidthFull: false,
     headings: defaultHeadings('#1f2328'),
     linkColor: '#0969da',
     linkUnderline: 'hover',
@@ -278,6 +282,7 @@ export const PRESETS: StyleProfile[] = [
     color: '#5b4636',
     background: '#f4ecd8',
     maxWidth: 760,
+    maxWidthFull: false,
     headings: defaultHeadings('#43352a'),
     linkColor: '#8a5a2b',
     linkUnderline: 'hover',

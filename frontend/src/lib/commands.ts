@@ -22,6 +22,17 @@ function suggestName(fileName: string): string {
   return fileName.endsWith('.md') ? fileName : `${fileName}.md`
 }
 
+/** パスを指定してファイルを開く。ファイルが見つからない場合はセッション復元と同じ確認ダイアログを表示する。 */
+export async function openFileByPath(path: string): Promise<void> {
+  let doc = await tryRead(path)
+  while (!doc) {
+    const choice = await dialogStore.confirmMissing(path)
+    if (choice === 'skip') return
+    doc = await tryRead(path)
+  }
+  tabsStore.openFromDoc(doc)
+}
+
 /** ファイルを開く（複数可）。各ファイルをタブで開く。 */
 export async function openFiles(): Promise<void> {
   const docs = await openFilesDialog()

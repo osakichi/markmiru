@@ -4,7 +4,7 @@
   import { styleStore } from '../style/style.svelte'
   import { printDocument } from '../commands'
 
-  // 左: サイドバー開閉。右: テーマ（プロファイル）選択＋全画面トグル（閲覧 ⇄ ソース）。
+  // 左: サイドバー開閉。右: テーマ（プロファイル）選択＋全画面トグル（閲覧 ⇄ 編集）。
   // ファイル操作はネイティブメニュー。PDF・設定パネル等は step5-4/5-6。
   const active = $derived(tabsStore.active)
 
@@ -56,7 +56,7 @@
       class:selected={active?.mode === 'source'}
       disabled={!active}
       onclick={() => active && tabsStore.setMode(active.id, 'source')}
-    >ソース</button>
+    >編集</button>
   </div>
 </div>
 

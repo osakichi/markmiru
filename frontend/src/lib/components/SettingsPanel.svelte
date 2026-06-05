@@ -77,7 +77,13 @@
           <ColorField label="背景色" value={p.background} disabled={!editable} onChange={(v) => styleStore.updateActive({ background: v })} />
           <div class="row">
             <span class="label">本文の最大幅 (px)</span>
-            <input type="number" min="480" max="1400" step="10" value={p.maxWidth} disabled={!editable} oninput={(e) => styleStore.updateActive({ maxWidth: num(e) })} />
+            <input type="number" min="480" max="1400" step="10" value={p.maxWidth} disabled={!editable || p.maxWidthFull} oninput={(e) => styleStore.updateActive({ maxWidth: num(e) })} />
+          </div>
+          <div class="row">
+            <label class="checkbox-label">
+              <input type="checkbox" checked={p.maxWidthFull} disabled={!editable} onchange={(e) => styleStore.updateActive({ maxWidthFull: (e.currentTarget as HTMLInputElement).checked })} />
+              ウィンドウ幅に追従する
+            </label>
           </div>
         </section>
 
@@ -312,6 +318,17 @@
   .label {
     font-size: 0.82rem;
     color: #444;
+  }
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: #444;
+    cursor: pointer;
+  }
+  .checkbox-label input[type='checkbox'] {
+    cursor: pointer;
   }
   .row input[type='text'],
   .row input[type='number'],

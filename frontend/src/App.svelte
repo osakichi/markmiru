@@ -11,8 +11,8 @@
   import { isDirty } from './lib/stores/tabs'
   import { uiStore } from './lib/stores/ui.svelte'
   import { registerMenuHandlers } from './lib/menu'
-  import { setDirtyState } from './lib/api/wails'
-  import { restoreSession, currentConfig, schedulePersist } from './lib/commands'
+  import { setDirtyState, getPendingFiles } from './lib/api/wails'
+  import { restoreSession, currentConfig, schedulePersist, openFileByPath } from './lib/commands'
   import { styleStore } from './lib/style/style.svelte'
   import { applyHighlightTheme } from './lib/style/highlight'
 
@@ -21,11 +21,16 @@
   // ネイティブメニュー/ショートカットのイベント購読（解除は onMount の戻り値で）
   onMount(() => registerMenuHandlers())
 
-  // 起動時に前回セッションを復元（復元中は設定保存を抑止）
+  // 起動時に前回セッションを復元し、その後に起動引数・IPC 早期受信ファイルを開く。
+  // getPendingFiles() の呼出で Go 側の frontReady フラグが立ち、以降の IPC ファイルはイベントで配信される。
   onMount(async () => {
     uiStore.restoring = true
     try {
       await restoreSession()
+      const pending = await getPendingFiles()
+      for (const path of pending) {
+        await openFileByPath(path)
+      }
     } finally {
       uiStore.restoring = false
     }
