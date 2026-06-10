@@ -6,6 +6,9 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
+  "postBuildHooks": {
+    "darwin/*": "cp ../darwin/iconfile.icns Markmiru.app/Contents/Resources/iconfile.icns"
+  },
   "author": {
     "name": "",
     "email": ""
