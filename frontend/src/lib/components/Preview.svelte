@@ -2,7 +2,7 @@
   import { tick } from 'svelte'
   import { renderMarkdown, runMermaid, resolveLocalImages } from '../markdown/renderer'
   import { styleStore } from '../style/style.svelte'
-  import { profileToVars, varsToStyleString } from '../style/profile'
+  import { styleToVars, varsToStyleString } from '../style/styleDef'
   import { tabsStore } from '../stores/tabs.svelte'
   import { uiStore } from '../stores/ui.svelte'
   import { dialogStore } from '../dialog.svelte'
@@ -31,8 +31,8 @@
   // 同一タブで確認ダイアログが多重に開かないようにするガード。
   let confirmingId: string | null = null
 
-  // アクティブプロファイルから CSS 変数を生成して適用（背景・配色・フォント等）
-  const varsStyle = $derived(varsToStyleString(profileToVars(styleStore.active)))
+  // アクティブスタイルから CSS 変数を生成して適用（背景・配色・フォント等）
+  const varsStyle = $derived(varsToStyleString(styleToVars(styleStore.active)))
 
   // source・テーマ・リモート画像ポリシーに依存して再描画。
   $effect(() => {

@@ -5,7 +5,7 @@ import { isDirty } from './stores/tabs'
 import { uiStore } from './stores/ui.svelte'
 import { styleStore } from './style/style.svelte'
 import { contentHasRemoteImages } from './markdown/renderer'
-import type { StyleProfile } from './style/profile'
+import { serializeStyle, parseStyleFile, type Style } from './style/styleDef'
 import {
   openFilesDialog,
   saveFileDialog,
@@ -13,6 +13,8 @@ import {
   readFile,
   readLicense,
   readReadme,
+  exportStyleDialog,
+  importStyleDialog,
   quit,
   loadConfig,
   saveConfig,
@@ -20,6 +22,7 @@ import {
   type FileDoc
 } from './api/wails'
 import { dialogStore } from './dialog.svelte'
+import { stylePicker } from './stylePicker.svelte'
 
 function suggestName(fileName: string): string {
   return fileName.endsWith('.md') ? fileName : `${fileName}.md`
@@ -90,6 +93,61 @@ export async function openReadme(): Promise<void> {
     mode: 'view',
     readOnly: true
   })
+}
+
+/** ファイル名に使えない文字を _ に置換する。 */
+function safeFileName(name: string): string {
+  return (name.trim() || 'style').replace(/[\\/:*?"<>|]/g, '_')
+}
+
+/**
+ * スタイルをファイルへエクスポートする（メタ情報付き封筒の JSON）。
+ * メニュー「ファイル → スタイル → エクスポート...」から呼ぶ。対象はピッカーで選ばせ、
+ * プリセット（builtin）はグレー表示で選択不可。設計: docs/スタイル設定設計.md §6
+ */
+export async function exportStyle(): Promise<void> {
+  const items = styleStore.styles.map((p) => ({ id: p.id, name: p.name, builtin: p.builtin }))
+  const id = await stylePicker.pick(items)
+  if (!id) return
+  const p = styleStore.styles.find((x) => x.id === id)
+  if (!p || p.builtin) return
+  const path = await exportStyleDialog(`${safeFileName(p.name)}.json`)
+  if (!path) return
+  await saveFile(path, serializeStyle(p))
+}
+
+/**
+ * スタイルをファイルからインポートする。メニュー「ファイル → スタイル → インポート...」から呼ぶ。
+ * 重複は「名前」で判定する（ユーザーから見た同一性は名前で表れるため）。
+ * - 同名の既存ユーザースタイルがある場合は確認（上書き / 別名で追加 / キャンセル）。
+ * - 同名のプリセットと衝突する場合は上書き不可のため、名前を一意化して追加。
+ * - 衝突なしならそのままの名前で追加。ID は常に新規採番する。
+ * 不正なファイルはエラーダイアログで通知し、状態は変更しない。
+ */
+export async function importStyle(): Promise<void> {
+  const text = await importStyleDialog()
+  if (!text) return
+  let parsed: Style
+  try {
+    parsed = parseStyleFile(text)
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : '不明なエラー'
+    await dialogStore.notify('インポートに失敗しました', `スタイルを読み込めませんでした。\n${reason}`)
+    return
+  }
+  const existing = styleStore.findByName(parsed.name)
+  if (existing && !existing.builtin) {
+    const choice = await dialogStore.confirmImportOverwrite(existing.name)
+    if (choice === 'cancel') return
+    if (choice === 'overwrite') {
+      styleStore.overwriteImported(existing.id, parsed)
+    } else {
+      styleStore.addImported(parsed, { rename: true }) // 別名で追加（名前を一意化）
+    }
+    return
+  }
+  // 衝突なし → そのまま。プリセット名と衝突 → 名前を一意化して追加。
+  styleStore.addImported(parsed, { rename: !!existing })
 }
 
 /** アクティブタブを保存。無題（パス未設定）なら保存先を尋ねる。 */
@@ -226,8 +284,8 @@ export async function requestQuit(): Promise<void> {
   await saveConfig({
     session: { files: sessionFiles, activeIndex },
     sidebarOpen: uiStore.sidebarOpen,
-    profilesJson: JSON.stringify(styleStore.userProfiles),
-    activeProfileId: styleStore.activeId
+    stylesJson: JSON.stringify(styleStore.userStyles),
+    activeStyleId: styleStore.activeId
   })
   await quit()
 }
@@ -247,16 +305,16 @@ export async function restoreSession(): Promise<void> {
   const cfg = await loadConfig()
   uiStore.sidebarOpen = cfg.sidebarOpen
 
-  // スタイルプロファイル（ユーザー定義）とアクティブテーマを復元
-  let userProfiles: StyleProfile[] = []
-  if (cfg.profilesJson) {
+  // スタイル（ユーザー定義）とアクティブスタイルを復元
+  let userStyles: Style[] = []
+  if (cfg.stylesJson) {
     try {
-      userProfiles = JSON.parse(cfg.profilesJson) as StyleProfile[]
+      userStyles = JSON.parse(cfg.stylesJson) as Style[]
     } catch {
-      userProfiles = []
+      userStyles = []
     }
   }
-  styleStore.loadUserProfiles(userProfiles, cfg.activeProfileId)
+  styleStore.loadUserStyles(userStyles, cfg.activeStyleId)
 
   const files = cfg.session?.files ?? []
   let activeTabId: string | null = null
@@ -292,8 +350,8 @@ export function currentConfig(): AppConfig {
   return {
     session: { files, activeIndex },
     sidebarOpen: uiStore.sidebarOpen,
-    profilesJson: JSON.stringify(styleStore.userProfiles),
-    activeProfileId: styleStore.activeId
+    stylesJson: JSON.stringify(styleStore.userStyles),
+    activeStyleId: styleStore.activeId
   }
 }
 

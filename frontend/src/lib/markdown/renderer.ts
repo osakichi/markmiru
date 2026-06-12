@@ -3,7 +3,7 @@ import taskLists from 'markdown-it-task-lists'
 import hljs from 'highlight.js'
 import DOMPurify from 'dompurify'
 import mermaid from 'mermaid'
-import type { ColorScheme } from '../style/profile'
+import type { ColorScheme } from '../style/styleDef'
 import { readImageAsDataURL } from '../api/wails'
 
 // 閲覧モードの Markdown レンダリングパイプライン

@@ -4,11 +4,11 @@
   import { styleStore } from '../style/style.svelte'
   import { printDocument } from '../commands'
 
-  // 左: サイドバー開閉。右: テーマ（プロファイル）選択＋全画面トグル（閲覧 ⇄ 編集）。
+  // 左: サイドバー開閉。右: スタイル選択＋全画面トグル（閲覧 ⇄ 編集）。
   // ファイル操作はネイティブメニュー。PDF・設定パネル等は step5-4/5-6。
   const active = $derived(tabsStore.active)
 
-  function onThemeChange(e: Event): void {
+  function onStyleChange(e: Event): void {
     styleStore.setActive((e.currentTarget as HTMLSelectElement).value)
   }
 </script>
@@ -23,10 +23,10 @@
 
   <div class="spacer"></div>
 
-  <label class="theme">
-    テーマ
-    <select value={styleStore.activeId} onchange={onThemeChange}>
-      {#each styleStore.profiles as p (p.id)}
+  <label class="style-select">
+    スタイル
+    <select value={styleStore.activeId} onchange={onStyleChange}>
+      {#each styleStore.styles as p (p.id)}
         <option value={p.id}>{p.name}</option>
       {/each}
     </select>
@@ -85,14 +85,14 @@
   .icon-btn:hover {
     background: #f3f4f6;
   }
-  .theme {
+  .style-select {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
     font-size: 0.78rem;
     color: #57606a;
   }
-  .theme select {
+  .style-select select {
     font-size: 0.8rem;
     padding: 0.15rem 0.3rem;
     border: 1px solid #d0d7de;

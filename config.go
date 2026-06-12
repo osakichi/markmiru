@@ -21,21 +21,21 @@ type Session struct {
 }
 
 // Config は永続化する設定全体。
-// ユーザーのスタイルプロファイルはフロント側の型をそのまま JSON 文字列で保持する
-// （Go 側でプロファイル構造を二重定義しないため）。
+// ユーザーのスタイルはフロント側の型をそのまま JSON 文字列で保持する
+// （Go 側でスタイル構造を二重定義しないため）。
 type Config struct {
-	Session         Session `json:"session"`
-	SidebarOpen     bool    `json:"sidebarOpen"`
-	ProfilesJson    string  `json:"profilesJson"`
-	ActiveProfileId string  `json:"activeProfileId"`
+	Session       Session `json:"session"`
+	SidebarOpen   bool    `json:"sidebarOpen"`
+	StylesJson    string  `json:"stylesJson"`
+	ActiveStyleId string  `json:"activeStyleId"`
 }
 
 func defaultConfig() Config {
 	return Config{
-		Session:         Session{Files: []SessionFile{}, ActiveIndex: -1},
-		SidebarOpen:     true,
-		ProfilesJson:    "",
-		ActiveProfileId: "light",
+		Session:       Session{Files: []SessionFile{}, ActiveIndex: -1},
+		SidebarOpen:   true,
+		StylesJson:    "",
+		ActiveStyleId: "light",
 	}
 }
 

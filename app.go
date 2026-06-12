@@ -149,6 +149,12 @@ var markdownFilters = []runtime.FileFilter{
 	{DisplayName: "すべてのファイル (*.*)", Pattern: "*.*"},
 }
 
+// jsonFilters はスタイルの入出力ダイアログ用フィルタ。
+var jsonFilters = []runtime.FileFilter{
+	{DisplayName: "Markmiru スタイル (*.json)", Pattern: "*.json"},
+	{DisplayName: "すべてのファイル (*.*)", Pattern: "*.*"},
+}
+
 // OpenFiles はネイティブのファイル選択（複数可）を開き、選択ファイルを読み込んで返す。
 // 読み込めなかったファイルはスキップする。
 func (a *App) OpenFiles() ([]FileDoc, error) {
@@ -203,6 +209,33 @@ func (a *App) SaveFileDialog(suggestedName string) (string, error) {
 		DefaultFilename: suggestedName,
 		Filters:         markdownFilters,
 	})
+}
+
+// ExportStyleDialog はスタイル書き出し用の保存ダイアログを表示し、
+// 選択パスを返す（キャンセル時は空文字）。書き込みは SaveFile を使う。
+func (a *App) ExportStyleDialog(suggestedName string) (string, error) {
+	return runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "スタイルのエクスポート",
+		DefaultFilename: suggestedName,
+		Filters:         jsonFilters,
+	})
+}
+
+// ImportStyleDialog はスタイル読み込み用の選択ダイアログ（単一）を表示し、
+// 選択ファイルの内容を返す（キャンセル時は空文字）。
+func (a *App) ImportStyleDialog() (string, error) {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:   "スタイルプロファイルのインポート",
+		Filters: jsonFilters,
+	})
+	if err != nil || path == "" {
+		return "", err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // imageMaxBytes はローカル画像として読み込む最大サイズ（50 MB）。

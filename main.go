@@ -31,6 +31,10 @@ func buildMenu(app *App) *menu.Menu {
 	fileMenu.AddSeparator()
 	fileMenu.AddText("PDF 出力 / 印刷", keys.CmdOrCtrl("p"), func(_ *menu.CallbackData) { app.emit("menu:print") })
 	fileMenu.AddSeparator()
+	styleMenu := fileMenu.AddSubmenu("スタイル")
+	styleMenu.AddText("インポート...", nil, func(_ *menu.CallbackData) { app.emit("menu:style-import") })
+	styleMenu.AddText("エクスポート...", nil, func(_ *menu.CallbackData) { app.emit("menu:style-export") })
+	fileMenu.AddSeparator()
 	fileMenu.AddText("終了", keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) { runtime.Quit(app.ctx) })
 
 	viewMenu := appMenu.AddSubmenu("表示")

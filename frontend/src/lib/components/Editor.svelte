@@ -5,11 +5,11 @@
   import { Compartment, type Extension } from '@codemirror/state'
   import { oneDark } from '@codemirror/theme-one-dark'
   import { styleStore } from '../style/style.svelte'
-  import type { ColorScheme } from '../style/profile'
+  import type { ColorScheme } from '../style/styleDef'
 
   // 編集モードのエディタ（CodeMirror 6）。設計: docs/スタイル設定設計.md §9
   //   控えめな Markdown 構文ハイライト / 行番号 / 行の折り返し（ソフトラップ）/ 等幅フォント。
-  //   配色テーマは本文プロファイルの colorScheme に連動（light=既定 / dark=one-dark）。
+  //   配色テーマは本文スタイルの colorScheme に連動（light=既定 / dark=one-dark）。
   let { value = '', onChange }: { value?: string; onChange?: (v: string) => void } = $props()
 
   let host: HTMLDivElement

@@ -1,4 +1,4 @@
-// 閲覧モードのスタイルプロファイル（構造化データ）と CSS 変数への変換。
+// 閲覧モードのスタイル（構造化データ）と CSS 変数への変換。
 // 設計: docs/スタイル設定設計.md §1, §2, §6。Markdown 記法ごとに項目を持つ。
 
 export type ColorScheme = 'light' | 'dark'
@@ -16,7 +16,7 @@ export interface HeadingStyle {
   border: boolean // 下線（水平線）の有無
 }
 
-export interface StyleProfile {
+export interface Style {
   id: string
   name: string
   /** 標準プリセット（雛形）か。true は直接編集不可（複製して編集）。 */
@@ -110,7 +110,7 @@ function defaultHeadings(color: string): HeadingStyle[] {
 }
 
 /** CSS 変数への変換。プレビュー要素に適用する。 */
-export function profileToVars(p: StyleProfile): Record<string, string> {
+export function styleToVars(p: Style): Record<string, string> {
   const vars: Record<string, string> = {
     '--md-font': p.fontFamily,
     '--md-font-size': `${p.fontSize}px`,
@@ -162,10 +162,10 @@ export function varsToStyleString(vars: Record<string, string>): string {
 }
 
 // 標準プリセット（複製・編集できる雛形）。
-export const PRESETS: StyleProfile[] = [
+export const PRESETS: Style[] = [
   {
     id: 'light',
-    name: 'ライト',
+    name: 'ライト (プリセット)',
     builtin: true,
     colorScheme: 'light',
     fontFamily: SANS,
@@ -201,7 +201,7 @@ export const PRESETS: StyleProfile[] = [
   },
   {
     id: 'dark',
-    name: 'ダーク',
+    name: 'ダーク (プリセット)',
     builtin: true,
     colorScheme: 'dark',
     fontFamily: SANS,
@@ -237,7 +237,7 @@ export const PRESETS: StyleProfile[] = [
   },
   {
     id: 'github',
-    name: 'GitHub 風',
+    name: 'GitHub 風 (プリセット)',
     builtin: true,
     colorScheme: 'light',
     fontFamily: SANS,
@@ -273,7 +273,7 @@ export const PRESETS: StyleProfile[] = [
   },
   {
     id: 'sepia',
-    name: 'セピア',
+    name: 'セピア (プリセット)',
     builtin: true,
     colorScheme: 'light',
     fontFamily: SANS,
@@ -309,12 +309,59 @@ export const PRESETS: StyleProfile[] = [
   }
 ]
 
-/** 旧バージョンや欠損のあるプロファイルを既定値で補完して整形する（復元時の安全策）。 */
-export function normalizeProfile(p: Partial<StyleProfile>): StyleProfile {
+// プリセットの表示名に付ける接尾辞。ユーザーが「ライト」等の名前を使えるよう、
+// プリセット側を「ライト (プリセット)」として区別する。
+export const PRESET_NAME_SUFFIX = ' (プリセット)'
+
+/** 表示名から末尾の「 (プリセット)」を除いた基底名を返す（複製時の名前生成に使う）。 */
+export function baseStyleName(name: string): string {
+  return name.endsWith(PRESET_NAME_SUFFIX) ? name.slice(0, -PRESET_NAME_SUFFIX.length) : name
+}
+
+/** 旧バージョンや欠損のあるスタイルを既定値で補完して整形する（復元時の安全策）。 */
+export function normalizeStyle(p: Partial<Style>): Style {
   const base = structuredClone(PRESETS[0]) // light を雛形に
-  const merged = { ...base, ...p, builtin: false } as StyleProfile
+  const merged = { ...base, ...p, builtin: false } as Style
   if (!Array.isArray(merged.headings) || merged.headings.length !== 6) {
     merged.headings = defaultHeadings(merged.color || base.color)
   }
   return merged
+}
+
+// エクスポート/インポートのファイル形式（メタ情報付き封筒）。設計: docs/スタイル設定設計.md §6
+const STYLE_FILE_APP = 'Markmiru'
+const STYLE_FILE_KIND = 'style'
+const STYLE_FILE_VERSION = 1
+
+/** スタイルを封筒に包んで JSON 文字列（整形済み）にする。 */
+export function serializeStyle(s: Style): string {
+  const envelope = {
+    app: STYLE_FILE_APP,
+    kind: STYLE_FILE_KIND,
+    version: STYLE_FILE_VERSION,
+    style: s
+  }
+  return JSON.stringify(envelope, null, 2)
+}
+
+/**
+ * 封筒形式の JSON 文字列を検証し、補完済み Style を返す。
+ * 形式が不正な場合は例外を投げる（呼び出し側でエラー表示）。
+ * builtin / 欠損は normalizeStyle が担保（ID の再割り当ては呼び出し側で行う）。
+ */
+export function parseStyleFile(text: string): Style {
+  let obj: unknown
+  try {
+    obj = JSON.parse(text)
+  } catch {
+    throw new Error('JSON として解釈できません。')
+  }
+  if (typeof obj !== 'object' || obj === null) {
+    throw new Error('スタイル形式ではありません。')
+  }
+  const env = obj as { kind?: unknown; style?: unknown }
+  if (env.kind !== STYLE_FILE_KIND || typeof env.style !== 'object' || env.style === null) {
+    throw new Error('Markmiru のスタイルではありません。')
+  }
+  return normalizeStyle(env.style as Partial<Style>)
 }

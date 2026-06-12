@@ -4,6 +4,7 @@
   import Toolbar from './lib/components/Toolbar.svelte'
   import OpenFilesList from './lib/components/OpenFilesList.svelte'
   import ConfirmDialog from './lib/components/ConfirmDialog.svelte'
+  import ExportPickerDialog from './lib/components/ExportPickerDialog.svelte'
   import SettingsPanel from './lib/components/SettingsPanel.svelte'
   import Preview from './lib/components/Preview.svelte'
   import Editor from './lib/components/Editor.svelte'
@@ -108,6 +109,7 @@
 </div>
 
 <ConfirmDialog />
+<ExportPickerDialog />
 <SettingsPanel />
 
 <style>

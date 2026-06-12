@@ -5,6 +5,7 @@
 export type SaveChoice = 'save' | 'discard' | 'cancel'
 export type MissingChoice = 'retry' | 'skip'
 export type RemoteImageChoice = 'allow' | 'block'
+export type ImportOverwriteChoice = 'overwrite' | 'addNew' | 'cancel'
 
 interface DialogButton {
   label: string
@@ -88,6 +89,32 @@ class DialogStore {
       enterValue: 'block', // Enter=メイン（表示しない）
       escValue: 'allow'    // Esc=サブ（表示する）
     }) as Promise<RemoteImageChoice>
+  }
+
+  /** インポート時、同一 ID の既存プロファイルがある場合の確認（上書き/別名で追加/キャンセル）。 */
+  confirmImportOverwrite(name: string): Promise<ImportOverwriteChoice> {
+    return this.#show({
+      title: 'プロファイルの上書き確認',
+      message: `既に「${name}」が存在します。上書きしますか？\n「別名で追加」を選ぶと、別のプロファイルとして取り込みます。`,
+      buttons: [
+        { label: '上書き', value: 'overwrite', primary: true },
+        { label: '別名で追加', value: 'addNew' },
+        { label: 'キャンセル', value: 'cancel' }
+      ],
+      enterValue: 'overwrite',
+      escValue: 'cancel'
+    }) as Promise<ImportOverwriteChoice>
+  }
+
+  /** 単一ボタン（OK）の通知ダイアログ。エラー等の伝達に使う。 */
+  notify(title: string, message: string): Promise<void> {
+    return this.#show({
+      title,
+      message,
+      buttons: [{ label: 'OK', value: 'ok', primary: true }],
+      enterValue: 'ok',
+      escValue: 'ok'
+    }).then(() => undefined)
   }
 
   /** ボタン選択時に呼ぶ。モーダルを閉じて Promise を解決する。 */

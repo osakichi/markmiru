@@ -4,7 +4,7 @@
 // <style> に注入して切り替える。テキストは Vite の ?inline で取得する。
 import hljsLight from 'highlight.js/styles/github.css?inline'
 import hljsDark from 'highlight.js/styles/github-dark.css?inline'
-import type { ColorScheme } from './profile'
+import type { ColorScheme } from './styleDef'
 
 const STYLE_ID = 'markmiru-hljs-theme'
 

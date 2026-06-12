@@ -8,6 +8,8 @@ import {
   ReadImageAsDataURL,
   SaveFile,
   SaveFileDialog,
+  ExportStyleDialog,
+  ImportStyleDialog,
   SetDirtyState,
   Quit,
   LoadConfig,
@@ -28,10 +30,10 @@ export interface Session {
 export interface AppConfig {
   session: Session
   sidebarOpen: boolean
-  /** ユーザープロファイル（StyleProfile[]）の JSON 文字列 */
-  profilesJson: string
-  /** アクティブプロファイル ID */
-  activeProfileId: string
+  /** ユーザースタイル（Style[]）の JSON 文字列 */
+  stylesJson: string
+  /** アクティブスタイル ID */
+  activeStyleId: string
 }
 
 /** ファイル選択ダイアログ（複数可）で開き、読み込んだ FileDoc 配列を返す。 */
@@ -62,6 +64,16 @@ export async function saveFileDialog(suggestedName: string): Promise<string> {
 /** 内容を指定パスへ書き込み、保存後の FileDoc を返す。 */
 export async function saveFile(path: string, content: string): Promise<FileDoc> {
   return await SaveFile(path, content)
+}
+
+/** スタイル書き出し用の保存ダイアログ。選択パスを返す（キャンセル時は空文字）。 */
+export async function exportStyleDialog(suggestedName: string): Promise<string> {
+  return await ExportStyleDialog(suggestedName)
+}
+
+/** スタイル読み込み用の選択ダイアログ。選択ファイルの内容を返す（キャンセル時は空文字）。 */
+export async function importStyleDialog(): Promise<string> {
+  return (await ImportStyleDialog()) ?? ''
 }
 
 /** 未保存の有無を Go に通知する（終了時の判定に使用）。 */

@@ -8,12 +8,37 @@
     type ColorScheme,
     type LinkUnderline,
     type MarkerPosition
-  } from '../style/profile'
+  } from '../style/styleDef'
 
-  // スタイル設定パネル。Markdown 記法ごとのセクションでアクティブプロファイルを編集（ライブ反映）。
+  // スタイル設定パネル。Markdown 記法ごとのセクションでアクティブスタイルを編集（ライブ反映）。
   // 標準プリセットは「複製して編集」。設計: docs/スタイル設定設計.md §2, §4
   const p = $derived(styleStore.active)
   const editable = $derived(!p.builtin)
+
+  // スタイル名はバッファ編集し、確定（フォーカスアウト/Enter）時に一意性を検証する。
+  // 空・重複（プリセット含む全スタイルで一意）は適用せず、現在名へ戻して警告を表示する。
+  let draftName = $state('')
+  let lastId = $state('')
+  $effect(() => {
+    if (p.id !== lastId) {
+      lastId = p.id
+      draftName = p.name
+    }
+  })
+  const nameError = $derived.by(() => {
+    if (!editable) return ''
+    const n = draftName.trim()
+    if (!n) return '名前を入力してください。'
+    if (styleStore.nameTaken(n, p.id)) return 'この名前は既に使われています。'
+    return ''
+  })
+  function commitName(): void {
+    if (styleStore.rename(p.id, draftName)) {
+      draftName = styleStore.active.name
+    } else {
+      draftName = p.name
+    }
+  }
 
   function num(e: Event): number {
     return Number((e.currentTarget as HTMLInputElement).value)
@@ -31,7 +56,7 @@
     <div class="panel" role="dialog" aria-modal="true" aria-label="スタイル設定">
       <header>
         <strong>スタイル設定</strong>
-        <span class="active-name">（{p.name}）</span>
+        <span class="active-name">{p.name}</span>
         <span class="spacer"></span>
         <button onclick={() => uiStore.closeSettings()}>閉じる</button>
       </header>
@@ -43,9 +68,20 @@
         </div>
       {:else}
         <div class="row">
-          <span class="label">プロファイル名</span>
-          <input type="text" value={p.name} oninput={(e) => styleStore.rename(p.id, val(e))} />
+          <span class="label">スタイル名</span>
+          <input
+            type="text"
+            class:invalid={nameError}
+            bind:value={draftName}
+            onblur={commitName}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur()
+            }}
+          />
         </div>
+        {#if nameError}
+          <p class="name-error">{nameError}</p>
+        {/if}
       {/if}
 
       <div class="body">
@@ -223,7 +259,7 @@
               onchange={(e) => (uiStore.printAsDisplayed = chk(e))}
             />
           </div>
-          <p class="note">オフ（既定）は紙向けに白背景・濃色文字へ変換します。プロファイルとは独立した全体設定です。</p>
+          <p class="note">オフ（既定）は紙向けに白背景・濃色文字へ変換します。スタイルとは独立した全体設定です。</p>
         </section>
 
         <!-- カスタム CSS -->
@@ -235,7 +271,7 @@
 
         {#if editable}
           <section>
-            <button class="danger" onclick={() => styleStore.remove(p.id)}>このプロファイルを削除</button>
+            <button class="danger" onclick={() => styleStore.remove(p.id)}>このスタイルを削除</button>
           </section>
         {/if}
       </div>
@@ -273,6 +309,7 @@
   .active-name {
     color: #57606a;
     font-size: 0.85rem;
+    margin-left: 1em;
   }
   .spacer {
     flex: 1;
@@ -343,6 +380,15 @@
   }
   .row input[type='text'] {
     width: 14em;
+  }
+  .row input[type='text'].invalid {
+    border-color: #cf222e;
+  }
+  .name-error {
+    margin: 0 0 0.2rem;
+    font-size: 0.75rem;
+    color: #cf222e;
+    text-align: right;
   }
   details.heading {
     border: 1px solid #eef1f4;
