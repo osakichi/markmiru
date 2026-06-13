@@ -5,7 +5,7 @@
   import { styleToVars, varsToStyleString } from '../style/styleDef'
   import { tabsStore } from '../stores/tabs.svelte'
   import { uiStore } from '../stores/ui.svelte'
-  import { dialogStore } from '../dialog.svelte'
+  import { riskyDialog } from '../riskyDialog.svelte'
   import '../styles/markdown.css'
 
   // 閲覧モードのプレビュー。source（Markdown 文字列）を描画する。
@@ -103,8 +103,13 @@
     if (confirmingId === id) return
     confirmingId = id
     try {
-      const choice = await dialogStore.confirmRemoteImages(fileName || '無題')
-      tabsStore.setRemoteImagePolicy(id, choice)
+      const ok = await riskyDialog.confirm({
+        title: '外部画像の読み込み確認',
+        message: `「${fileName || '無題'}」に外部画像が含まれています。読み込みますか？`,
+        acceptLabel: '表示する',
+        rejectLabel: '表示しない'
+      })
+      tabsStore.setRemoteImagePolicy(id, ok ? 'allow' : 'block')
     } finally {
       confirmingId = null
     }

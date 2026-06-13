@@ -4,7 +4,6 @@
 
 export type SaveChoice = 'save' | 'discard' | 'cancel'
 export type MissingChoice = 'retry' | 'skip'
-export type RemoteImageChoice = 'allow' | 'block'
 export type ImportOverwriteChoice = 'overwrite' | 'addNew' | 'cancel'
 
 interface DialogButton {
@@ -75,20 +74,6 @@ class DialogStore {
       enterValue: 'skip', // Enter=メイン（スキップ）
       escValue: 'retry'   // Esc=サブ（再試行）
     }) as Promise<MissingChoice>
-  }
-
-  /** リモート画像を含むファイルを開いた際の表示確認（表示する/表示しない）。 */
-  confirmRemoteImages(fileName: string): Promise<RemoteImageChoice> {
-    return this.#show({
-      title: '外部画像の読み込み確認',
-      message: `「${fileName}」に外部画像が含まれています。読み込みますか？`,
-      buttons: [
-        { label: '表示しない', value: 'block', primary: true },
-        { label: '表示する', value: 'allow' }
-      ],
-      enterValue: 'block', // Enter=メイン（表示しない）
-      escValue: 'allow'    // Esc=サブ（表示する）
-    }) as Promise<RemoteImageChoice>
   }
 
   /** インポート時、同一 ID の既存プロファイルがある場合の確認（上書き/別名で追加/キャンセル）。 */

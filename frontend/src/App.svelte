@@ -5,7 +5,7 @@
   import OpenFilesList from './lib/components/OpenFilesList.svelte'
   import ConfirmDialog from './lib/components/ConfirmDialog.svelte'
   import ExportPickerDialog from './lib/components/ExportPickerDialog.svelte'
-  import LinkOpenDialog from './lib/components/LinkOpenDialog.svelte'
+  import RiskyConfirmDialog from './lib/components/RiskyConfirmDialog.svelte'
   import ContextMenu from './lib/components/ContextMenu.svelte'
   import SettingsPanel from './lib/components/SettingsPanel.svelte'
   import Preview from './lib/components/Preview.svelte'
@@ -112,7 +112,7 @@
 
 <ConfirmDialog />
 <ExportPickerDialog />
-<LinkOpenDialog />
+<RiskyConfirmDialog />
 <ContextMenu />
 <SettingsPanel />
 

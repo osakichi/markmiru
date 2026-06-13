@@ -6,14 +6,21 @@
 //   - ページ内アンカー（#...）→ WebView 遷移にならないため既定動作を許可。
 //   - それ以外のスキーム → 念のため遷移を抑止（何も開かない）。
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
-import { linkDialog } from './linkDialog.svelte'
+import { riskyDialog } from './riskyDialog.svelte'
 
 // 外部ブラウザで開いてよいスキーム。
 const EXTERNAL_SCHEME_RE = /^(https?|mailto):/i
 
-// 外部リンクは確認ダイアログを挟んでから OS の既定アプリで開く。
+// 外部リンクは確認ダイアログ（危険な選択）を挟んでから OS の既定アプリで開く。
 async function confirmAndOpen(url: string): Promise<void> {
-  if (await linkDialog.confirm(url)) BrowserOpenURL(url)
+  const ok = await riskyDialog.confirm({
+    title: '外部リンクを開きますか？',
+    message: '次のリンクを既定のアプリで開きます。',
+    detail: url,
+    acceptLabel: 'はい',
+    rejectLabel: 'いいえ'
+  })
+  if (ok) BrowserOpenURL(url)
 }
 
 /** クリックされた要素から最も近い祖先 <a> を返す（composedPath 経由でシャドウ越えも考慮）。 */

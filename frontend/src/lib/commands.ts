@@ -22,6 +22,7 @@ import {
   type FileDoc
 } from './api/wails'
 import { dialogStore } from './dialog.svelte'
+import { riskyDialog } from './riskyDialog.svelte'
 import { stylePicker } from './stylePicker.svelte'
 
 function suggestName(fileName: string): string {
@@ -336,8 +337,13 @@ export async function restoreSession(): Promise<void> {
   // Preview は uiStore.restoring 中はダイアログを表示しないため、ここで一括処理する。
   for (const tab of tabsStore.tabs) {
     if (contentHasRemoteImages(tab.content)) {
-      const choice = await dialogStore.confirmRemoteImages(tab.fileName)
-      tabsStore.setRemoteImagePolicy(tab.id, choice)
+      const ok = await riskyDialog.confirm({
+        title: '外部画像の読み込み確認',
+        message: `「${tab.fileName}」に外部画像が含まれています。読み込みますか？`,
+        acceptLabel: '表示する',
+        rejectLabel: '表示しない'
+      })
+      tabsStore.setRemoteImagePolicy(tab.id, ok ? 'allow' : 'block')
     }
   }
 }
