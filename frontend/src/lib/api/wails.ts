@@ -10,6 +10,8 @@ import {
   SaveFileDialog,
   ExportStyleDialog,
   ImportStyleDialog,
+  ClipboardGetText,
+  ClipboardSetText,
   SetDirtyState,
   Quit,
   LoadConfig,
@@ -74,6 +76,16 @@ export async function exportStyleDialog(suggestedName: string): Promise<string> 
 /** スタイル読み込み用の選択ダイアログ。選択ファイルの内容を返す（キャンセル時は空文字）。 */
 export async function importStyleDialog(): Promise<string> {
   return (await ImportStyleDialog()) ?? ''
+}
+
+/** OS クリップボードのテキストを取得する（右クリックメニューの貼り付け用）。 */
+export async function clipboardGetText(): Promise<string> {
+  return (await ClipboardGetText()) ?? ''
+}
+
+/** OS クリップボードへテキストを書き込む（右クリックメニューのコピー/切り取り用）。 */
+export async function clipboardSetText(text: string): Promise<void> {
+  await ClipboardSetText(text)
 }
 
 /** 未保存の有無を Go に通知する（終了時の判定に使用）。 */

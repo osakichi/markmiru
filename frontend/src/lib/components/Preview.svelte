@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { tick, onMount } from 'svelte'
   import { renderMarkdown, runMermaid, resolveLocalImages } from '../markdown/renderer'
   import { styleStore } from '../style/style.svelte'
   import { styleToVars, varsToStyleString } from '../style/styleDef'
@@ -33,6 +33,47 @@
 
   // アクティブスタイルから CSS 変数を生成して適用（背景・配色・フォント等）
   const varsStyle = $derived(varsToStyleString(styleToVars(styleStore.active)))
+
+  // 本文のみを選択する（右クリックメニュー「すべて選択」および Ctrl+A と共通）。
+  function selectAllBody(): void {
+    if (!container) return
+    const range = document.createRange()
+    range.selectNodeContents(container)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }
+
+  // 閲覧モードのコピーは書式を捨てプレーンテキストのみにする（メニューのコピーと挙動を揃える）。
+  function onCopy(e: ClipboardEvent): void {
+    const selection = window.getSelection()
+    const text = selection?.toString() ?? ''
+    if (!text) return
+    // 選択が本文内のときのみ介入する（他所の選択には触れない）。
+    if (container && selection?.anchorNode && !container.contains(selection.anchorNode)) return
+    e.preventDefault()
+    e.clipboardData?.setData('text/plain', text)
+  }
+
+  // Ctrl+A（閲覧モード）は本文のみを対象にする（ブラウザ既定のページ全体選択ではなく）。
+  function onKeydown(e: KeyboardEvent): void {
+    if (!((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey)) return
+    if (e.key !== 'a' && e.key !== 'A') return
+    const t = e.target as HTMLElement | null
+    if (t?.closest('input, textarea, [contenteditable="true"]')) return // 入力欄では既定動作
+    e.preventDefault()
+    selectAllBody()
+  }
+
+  // Preview は閲覧モードのアクティブタブのみマウントされるため、購読はその間だけ有効。
+  onMount(() => {
+    window.addEventListener('copy', onCopy)
+    window.addEventListener('keydown', onKeydown)
+    return () => {
+      window.removeEventListener('copy', onCopy)
+      window.removeEventListener('keydown', onKeydown)
+    }
+  })
 
   // source・テーマ・リモート画像ポリシーに依存して再描画。
   $effect(() => {

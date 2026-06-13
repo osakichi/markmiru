@@ -63,10 +63,25 @@ func main() {
 
 	configDir, _ := os.UserConfigDir()
 
+	// 前回保存したウィンドウサイズ／最大化状態で起動する（無ければ既定値）。
+	cfg, _ := app.LoadConfig()
+	width, height := cfg.WindowWidth, cfg.WindowHeight
+	if width <= 0 {
+		width = defaultWindowWidth
+	}
+	if height <= 0 {
+		height = defaultWindowHeight
+	}
+	startState := options.Normal
+	if cfg.WindowMaximised {
+		startState = options.Maximised
+	}
+
 	err := wails.Run(&options.App{
-		Title:  "Markmiru",
-		Width:  1024,
-		Height: 768,
+		Title:            "Markmiru",
+		Width:            width,
+		Height:           height,
+		WindowStartState: startState,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

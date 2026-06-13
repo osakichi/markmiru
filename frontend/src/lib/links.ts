@@ -6,9 +6,15 @@
 //   - ページ内アンカー（#...）→ WebView 遷移にならないため既定動作を許可。
 //   - それ以外のスキーム → 念のため遷移を抑止（何も開かない）。
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime'
+import { linkDialog } from './linkDialog.svelte'
 
 // 外部ブラウザで開いてよいスキーム。
 const EXTERNAL_SCHEME_RE = /^(https?|mailto):/i
+
+// 外部リンクは確認ダイアログを挟んでから OS の既定アプリで開く。
+async function confirmAndOpen(url: string): Promise<void> {
+  if (await linkDialog.confirm(url)) BrowserOpenURL(url)
+}
 
 /** クリックされた要素から最も近い祖先 <a> を返す（composedPath 経由でシャドウ越えも考慮）。 */
 function findAnchor(e: MouseEvent): HTMLAnchorElement | null {
@@ -42,7 +48,7 @@ function onClick(e: MouseEvent): void {
   const href = a.href
   if (EXTERNAL_SCHEME_RE.test(href)) {
     e.preventDefault()
-    BrowserOpenURL(href)
+    void confirmAndOpen(href)
     return
   }
 

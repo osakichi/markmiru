@@ -28,14 +28,29 @@ type Config struct {
 	SidebarOpen   bool    `json:"sidebarOpen"`
 	StylesJson    string  `json:"stylesJson"`
 	ActiveStyleId string  `json:"activeStyleId"`
+
+	// ウィンドウ状態。更新は Go 側（beforeClose の saveWindowState）のみで、
+	// フロントの SaveConfig には含まれない（既存値を保持する）。
+	WindowWidth     int  `json:"windowWidth"`
+	WindowHeight    int  `json:"windowHeight"`
+	WindowMaximised bool `json:"windowMaximised"`
 }
+
+// defaultWindowWidth / defaultWindowHeight は初回起動時のウィンドウサイズ。
+const (
+	defaultWindowWidth  = 1024
+	defaultWindowHeight = 768
+)
 
 func defaultConfig() Config {
 	return Config{
-		Session:       Session{Files: []SessionFile{}, ActiveIndex: -1},
-		SidebarOpen:   true,
-		StylesJson:    "",
-		ActiveStyleId: "light",
+		Session:         Session{Files: []SessionFile{}, ActiveIndex: -1},
+		SidebarOpen:     true,
+		StylesJson:      "",
+		ActiveStyleId:   "light",
+		WindowWidth:     defaultWindowWidth,
+		WindowHeight:    defaultWindowHeight,
+		WindowMaximised: false,
 	}
 }
 
@@ -64,8 +79,24 @@ func (a *App) LoadConfig() (Config, error) {
 	return cfg, nil
 }
 
-// SaveConfig は設定を保存する。
+// SaveConfig はフロントエンドからの設定保存。ウィンドウ状態（サイズ・最大化）は
+// フロント側の保存対象に含まれないため、既存ファイルの値を保持する
+// （ウィンドウ状態の更新は beforeClose の saveWindowState のみが行う）。
 func (a *App) SaveConfig(cfg Config) error {
+	if existing, err := a.LoadConfig(); err == nil {
+		if cfg.WindowWidth == 0 {
+			cfg.WindowWidth = existing.WindowWidth
+		}
+		if cfg.WindowHeight == 0 {
+			cfg.WindowHeight = existing.WindowHeight
+		}
+		cfg.WindowMaximised = existing.WindowMaximised
+	}
+	return writeConfig(cfg)
+}
+
+// writeConfig は Config をそのまま config.json へ書き込む（マージなし）。
+func writeConfig(cfg Config) error {
 	path, err := configPath()
 	if err != nil {
 		return err

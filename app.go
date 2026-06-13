@@ -105,6 +105,17 @@ func (a *App) FocusWindow() {
 	focusWebview()
 }
 
+// ClipboardGetText は OS クリップボードのテキストを返す（右クリックメニューの貼り付け用）。
+// ブラウザのクリップボード API 制限を避けるため、OS クリップボードを Go 経由で扱う。
+func (a *App) ClipboardGetText() (string, error) {
+	return runtime.ClipboardGetText(a.ctx)
+}
+
+// ClipboardSetText は OS クリップボードへテキストを書き込む（右クリックメニューのコピー/切り取り用）。
+func (a *App) ClipboardSetText(text string) error {
+	return runtime.ClipboardSetText(a.ctx, text)
+}
+
 // Quit はアプリを終了する（フロントの終了確認ループ完了後に呼ばれる）。
 func (a *App) Quit() {
 	a.quitting.Store(true)
@@ -113,16 +124,41 @@ func (a *App) Quit() {
 
 // beforeClose はウィンドウを閉じる直前に呼ばれる。
 // 未保存があればフロントの終了確認ループ（タブごとの3択）を起動し、いったん閉じるのを中止する。
+// 実際に閉じる経路（return false）では、直前に現在のウィンドウサイズを保存する。
 // 設計: docs/アーキテクチャ・画面設計.md §5.3（タブごと確認方式）
 func (a *App) beforeClose(ctx context.Context) bool {
 	if a.quitting.Load() {
+		a.saveWindowState()
 		return false
 	}
 	if !a.hasUnsaved.Load() {
+		a.saveWindowState()
 		return false
 	}
 	a.emit("app:request-quit")
 	return true
+}
+
+// saveWindowState は現在のウィンドウサイズ／最大化状態を config に保存する。
+// 最大化中は通常サイズ（復元サイズ）を上書きせず、最大化フラグのみ更新する。
+// ウィンドウ状態は Go 側のこの経路だけが更新する（フロントの SaveConfig は既存値を保持）。
+func (a *App) saveWindowState() {
+	if a.ctx == nil {
+		return
+	}
+	cfg, err := a.LoadConfig()
+	if err != nil {
+		return
+	}
+	maximised := runtime.WindowIsMaximised(a.ctx)
+	cfg.WindowMaximised = maximised
+	if !maximised {
+		if w, h := runtime.WindowGetSize(a.ctx); w > 0 && h > 0 {
+			cfg.WindowWidth = w
+			cfg.WindowHeight = h
+		}
+	}
+	_ = writeConfig(cfg)
 }
 
 // FileDoc はファイルのパス・名前・親ディレクトリ・内容をまとめた DTO。
