@@ -23,6 +23,19 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 wails_json="$root/wails.json"
 wails="$HOME/go/bin/wails"
 
+# frontend/package.json の volta フィールドに固定した node/npm と、実行環境のバージョンを照合。
+# Volta 導入済みなら自動で固定版が選ばれる。未導入で版が違う場合は、frontend install 中の
+# 分かりにくい engine-strict エラーになる前に、ここで明示メッセージを出して停止する。
+want_node="$(node -p "require('$root/frontend/package.json').volta.node.split('.')[0]")"
+want_npm="$(node -p "require('$root/frontend/package.json').volta.npm.split('.')[0]")"
+have_node="$(node -v | sed 's/^v//' | cut -d. -f1)"
+have_npm="$(npm -v | cut -d. -f1)"
+if [ "$have_node" != "$want_node" ] || [ "$have_npm" != "$want_npm" ]; then
+  echo "Error: Node ${want_node}.x / npm ${want_npm}.x required (found node ${have_node}.x / npm ${have_npm}.x)." >&2
+  echo "Install Volta (https://volta.sh) so the pinned versions are used automatically, or install matching versions manually." >&2
+  exit 1
+fi
+
 # 版＝git ショート SHA。作業ツリーが汚れていれば -dirty を付与。
 sha="$(git -C "$root" rev-parse --short HEAD)"
 if [ -n "$(git -C "$root" status --porcelain)" ]; then

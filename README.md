@@ -110,10 +110,12 @@ Go・Node.js・Wails CLI の導入は全 OS で共通です。これに加えて
    - 入手元: [https://go.dev/dl/](https://go.dev/dl/)（各 OS 用インストーラ／アーカイブ）。Homebrew・パッケージマネージャでも可。
    - 確認: `go version`
    - `go install` した実行ファイルは既定で `go\bin`（Windows: `%USERPROFILE%\go\bin` / macOS・Linux: `~/go/bin`）に置かれます。
-2. **Node.js（LTS 推奨）＋ npm** をインストール
-   - 入手元: [https://nodejs.org/](https://nodejs.org/)（npm 同梱）。Homebrew・パッケージマネージャ・[nvm](https://github.com/nvm-sh/nvm) でも可。
-   - 確認: `node -v` / `npm -v`
-   - フロントエンドの依存取得（`npm install`）はビルド時に Wails が自動実行するため、手動での `npm install` は通常不要です。
+2. **Node.js ＋ npm**（バージョン固定）をインストール
+   - 本プロジェクトは **Node 24 系／npm 11 系**に固定しています（`frontend/package.json` の `volta`・`engines`、および `frontend/.npmrc` の `engine-strict`）。範囲外のバージョンでは依存インストールが**失敗**します（バージョン差による `package-lock.json` の意図しない再生成を防ぐため）。
+   - **推奨: [Volta](https://volta.sh/) を導入** → リポジトリ内に入ると `node`/`npm` が固定版へ**自動で切り替わり**ます（他プロジェクトと競合しません。固定版は初回に自動取得）。Volta なら手動でのバージョン管理は不要です。
+   - 手動で導入する場合は [https://nodejs.org/](https://nodejs.org/) 等で **Node 24 系（npm 11 同梱）** を入れてください。
+   - 確認: `node -v`（`v24.x`）／ `npm -v`（`11.x`）
+   - フロントエンドの依存取得はビルド時に Wails が自動実行（`npm ci`）するため、手動での操作は通常不要です（依存を追加・更新したいときのみ、固定版の環境で手動 `npm install` を実行してロックを更新します）。
 3. **Wails CLI** をインストール（コマンドは全 OS 同一）
    ```
    go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -191,7 +193,8 @@ Go・Node.js・Wails CLI の導入は全 OS で共通です。これに加えて
      ```
    - このスクリプトは **git のショート SHA をバージョンとして埋め込んだ上で内部的に `wails build` を実行**します（埋め込んだ版は「ヘルプ → Markmiru について」やファイルのプロパティ＝製品バージョンで確認できます）。
    - **バージョン埋め込みが不要なら、素の `wails build` でもビルドできます**（その場合バージョンは `dev` 表示になります）。`wails` を `PATH` に通していない場合はフルパスで呼び出します（例: Windows `& "$env:USERPROFILE\go\bin\wails.exe" build` / macOS・Linux `~/go/bin/wails build`）。
-   - フロントエンドの依存取得（`npm install`）・ビルド（`npm run build`）・Go バインディング生成は **Wails が自動で実行**します。
+   - フロントエンドの依存取得（`npm ci`＝ロックどおりに厳密インストールし `package-lock.json` を書き換えない）・ビルド（`npm run build`）・Go バインディング生成は **Wails が自動で実行**します。
+   - ビルドスクリプトは実行時に node/npm が固定版（**Node 24 系・npm 11 系**）かを検査し、不一致なら明示メッセージで停止します（Volta 導入済みなら自動で固定版が使われます）。
    - 成果物は `build/bin/` に出力されます（ファイル名は OS により異なる。後述）。
    - 初回ビルドは Go モジュール・npm パッケージの取得が走るため時間がかかります（ネットワーク接続が必要）。2 回目以降はキャッシュにより短縮されます。
 

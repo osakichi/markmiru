@@ -25,6 +25,18 @@ Set-Location $root
 $wailsJson = Join-Path $root 'wails.json'
 $wails = Join-Path $env:USERPROFILE 'go\bin\wails.exe'
 
+# Verify the active Node/npm match the versions pinned in frontend/package.json (volta field).
+# With Volta installed these are selected automatically; without it this stops early with a
+# clear message instead of a cryptic engine-strict error during the frontend install.
+$pkg = Get-Content (Join-Path $root 'frontend\package.json') -Raw | ConvertFrom-Json
+$wantNode = $pkg.volta.node
+$wantNpm = $pkg.volta.npm
+$haveNode = ((& node -v) -replace '^v', '').Trim()
+$haveNpm = (& npm -v).Trim()
+if ($haveNode.Split('.')[0] -ne $wantNode.Split('.')[0] -or $haveNpm.Split('.')[0] -ne $wantNpm.Split('.')[0]) {
+  throw "Node $wantNode / npm $wantNpm required (found node $haveNode / npm $haveNpm). Install Volta (https://volta.sh) so the pinned versions are used automatically, or install matching versions manually."
+}
+
 # Version = git short SHA, with "-dirty" if the working tree is not clean.
 $sha = (& git rev-parse --short HEAD | Out-String).Trim()
 if (-not $sha) { throw 'git rev-parse failed (empty SHA)' }
