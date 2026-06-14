@@ -23,16 +23,23 @@ const wmSetFocus = 0x0007 // WM_SETFOCUS
 func setSocketPerms(_ string) {}
 func verifyPeer(_ *net.UnixConn) bool { return true }
 
+// findMainWindow はタイトル（appTitle）からメインウィンドウのハンドルを取得する。
+// 見つからない場合は ok=false を返す。
+func findMainWindow() (hwnd uintptr, ok bool) {
+	titlePtr, err := syscall.UTF16PtrFromString(appTitle)
+	if err != nil {
+		return 0, false
+	}
+	hwnd, _, _ = procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	return hwnd, hwnd != 0
+}
+
 // platformGrantForeground は後発インスタンスが終了前に呼ぶ。
 // 先発インスタンスの PID を特定し AllowSetForegroundWindow で許可を与えることで、
 // 先発が SetForegroundWindow を成功させられるようにする。
 func platformGrantForeground() {
-	titlePtr, err := syscall.UTF16PtrFromString("Markmiru")
-	if err != nil {
-		return
-	}
-	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-	if hwnd == 0 {
+	hwnd, ok := findMainWindow()
+	if !ok {
 		return
 	}
 	var pid uint32
@@ -46,12 +53,8 @@ func platformGrantForeground() {
 // activateWindowWin32 は先発インスタンスがウィンドウを前面に出すために呼ぶ。
 // AllowSetForegroundWindow で許可を受けた後に呼ぶことで SetForegroundWindow が成功する。
 func activateWindowWin32() {
-	titlePtr, err := syscall.UTF16PtrFromString("Markmiru")
-	if err != nil {
-		return
-	}
-	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-	if hwnd == 0 {
+	hwnd, ok := findMainWindow()
+	if !ok {
 		return
 	}
 	const swRestore = 9
@@ -65,12 +68,8 @@ func activateWindowWin32() {
 // chromium.Focus() を呼ぶ（winc wndproc → OnSetFocus）ので、メッセージを直接送って誘発する。
 // ウィンドウが既にフォーカスを保持していても、メッセージ送信なので no-op にならない。
 func focusWebview() {
-	titlePtr, err := syscall.UTF16PtrFromString("Markmiru")
-	if err != nil {
-		return
-	}
-	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-	if hwnd == 0 {
+	hwnd, ok := findMainWindow()
+	if !ok {
 		return
 	}
 	procPostMessageW.Call(hwnd, uintptr(wmSetFocus), 0, 0)

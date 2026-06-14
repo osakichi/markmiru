@@ -49,18 +49,18 @@
     void setDirtyState(hasUnsaved)
   })
 
-  // 設定（セッション・サイドバー状態・プロファイル）を永続化。復元中・終了中は抑止。デバウンス保存。
+  // 設定（セッション・サイドバー状態・スタイル）を永続化。復元中・終了中は抑止。デバウンス保存。
   $effect(() => {
     if (uiStore.restoring || uiStore.closing) return
     schedulePersist(currentConfig())
   })
 
-  // コードブロックのハイライトテーマをアクティブプロファイルの colorScheme に連動
+  // コードブロックのハイライトテーマをアクティブスタイルの colorScheme に連動
   $effect(() => {
     applyHighlightTheme(styleStore.active.colorScheme)
   })
 
-  // カスタム CSS（プロファイル）を style 要素へ反映
+  // カスタム CSS（スタイル）を style 要素へ反映
   $effect(() => {
     const css = styleStore.active.customCSS ?? ''
     let el = document.getElementById('markmiru-custom-css') as HTMLStyleElement | null

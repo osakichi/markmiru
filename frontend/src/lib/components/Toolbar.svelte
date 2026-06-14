@@ -5,7 +5,7 @@
   import { printDocument } from '../commands'
 
   // 左: サイドバー開閉。右: スタイル選択＋全画面トグル（閲覧 ⇄ 編集）。
-  // ファイル操作はネイティブメニュー。PDF・設定パネル等は step5-4/5-6。
+  // ファイル操作はネイティブメニュー。
   const active = $derived(tabsStore.active)
 
   function onStyleChange(e: Event): void {

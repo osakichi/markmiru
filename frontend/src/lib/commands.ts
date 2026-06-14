@@ -1,4 +1,4 @@
-// 開く/保存などのユーザー操作（コマンド）。ツールバー・メニュー（step4-2）から呼ぶ。
+// 開く/保存などのユーザー操作（コマンド）。ツールバー・ネイティブメニューから呼ぶ。
 import { tick } from 'svelte'
 import { tabsStore } from './stores/tabs.svelte'
 import { isDirty } from './stores/tabs'
@@ -48,51 +48,46 @@ export async function openFiles(): Promise<void> {
   }
 }
 
-/** ライセンスタブの表示名。 */
+/** ライセンスタブ／README（About）タブの表示名。 */
 const LICENSE_TAB_NAME = 'ライセンス'
+const README_TAB_NAME = 'Markmiru について'
 
 /**
- * 同梱ライセンス（LICENSE.md）を編集不可タブで開く。メニュー「ライセンス...」から呼ぶ。
+ * 同梱ドキュメントを編集不可タブで開く（ライセンス／About 共通）。
  * - filePath を持たせない（null）ため「開いているファイル一覧」にパスは出ず、セッションにも保存されない。
  * - readOnly タブとして開き、編集モードへの切替・保存を無効化する。
  * - 既に開いていれば再取得せずそのタブをアクティブ化する。
  */
-export async function openLicense(): Promise<void> {
-  const existing = tabsStore.tabs.find((t) => t.readOnly && t.fileName === LICENSE_TAB_NAME)
+async function openReadOnlyDoc(name: string, read: () => Promise<string>): Promise<void> {
+  const existing = tabsStore.tabs.find((t) => t.readOnly && t.fileName === name)
   if (existing) {
     tabsStore.activate(existing.id)
     return
   }
-  const content = await readLicense()
-  tabsStore.open({
-    filePath: null,
-    fileName: LICENSE_TAB_NAME,
-    content,
-    mode: 'view',
-    readOnly: true
-  })
+  const content = await read()
+  tabsStore.open({ filePath: null, fileName: name, content, mode: 'view', readOnly: true })
 }
 
-/** README タブの表示名。 */
-const README_TAB_NAME = 'Markmiru について'
+/** 同梱ライセンス（LICENSE.md）を編集不可タブで開く。メニュー「ライセンス...」から呼ぶ。 */
+export function openLicense(): Promise<void> {
+  return openReadOnlyDoc(LICENSE_TAB_NAME, readLicense)
+}
+
+/** 同梱 README を編集不可タブで開く。メニュー「Markmiru について...」から呼ぶ（About 代わり）。 */
+export function openReadme(): Promise<void> {
+  return openReadOnlyDoc(README_TAB_NAME, readReadme)
+}
 
 /**
- * 同梱 README（README.md）を編集不可タブで開く。メニュー「Markmiru について...」から呼ぶ（About 代わり）。
- * 挙動は openLicense と同様（filePath=null・readOnly・既存があれば再利用）。
+ * 外部画像を含むファイルの表示可否を確認する（危険な選択ダイアログ。許可で true）。
+ * Preview（開いた時）とセッション復元の両方から使う。設計: docs/アーキテクチャ・画面設計.md §5.8
  */
-export async function openReadme(): Promise<void> {
-  const existing = tabsStore.tabs.find((t) => t.readOnly && t.fileName === README_TAB_NAME)
-  if (existing) {
-    tabsStore.activate(existing.id)
-    return
-  }
-  const content = await readReadme()
-  tabsStore.open({
-    filePath: null,
-    fileName: README_TAB_NAME,
-    content,
-    mode: 'view',
-    readOnly: true
+export function askRemoteImages(fileName: string): Promise<boolean> {
+  return riskyDialog.confirm({
+    title: '外部画像の読み込み確認',
+    message: `「${fileName || '無題'}」に外部画像が含まれています。読み込みますか？`,
+    acceptLabel: '表示する',
+    rejectLabel: '表示しない'
   })
 }
 
@@ -142,7 +137,7 @@ export async function importStyle(): Promise<void> {
     if (choice === 'cancel') return
     if (choice === 'overwrite') {
       styleStore.overwriteImported(existing.id, parsed)
-    } else {
+    } else if (choice === 'addNew') {
       styleStore.addImported(parsed, { rename: true }) // 別名で追加（名前を一意化）
     }
     return
@@ -337,12 +332,7 @@ export async function restoreSession(): Promise<void> {
   // Preview は uiStore.restoring 中はダイアログを表示しないため、ここで一括処理する。
   for (const tab of tabsStore.tabs) {
     if (contentHasRemoteImages(tab.content)) {
-      const ok = await riskyDialog.confirm({
-        title: '外部画像の読み込み確認',
-        message: `「${tab.fileName}」に外部画像が含まれています。読み込みますか？`,
-        acceptLabel: '表示する',
-        rejectLabel: '表示しない'
-      })
+      const ok = await askRemoteImages(tab.fileName)
       tabsStore.setRemoteImagePolicy(tab.id, ok ? 'allow' : 'block')
     }
   }

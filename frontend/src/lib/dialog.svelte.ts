@@ -1,6 +1,7 @@
 // アプリ内モーダルダイアログの状態。Promise ベースで選択結果を返す。
 // Windows のネイティブ MessageDialog はカスタム3ボタンに非対応のため、
 // 確認系はアプリ内モーダルで実装する（クロスプラットフォームでも一貫）。
+import { PromiseDialog } from './promiseDialog.svelte'
 
 export type SaveChoice = 'save' | 'discard' | 'cancel'
 export type MissingChoice = 'retry' | 'skip'
@@ -12,13 +13,11 @@ interface DialogButton {
   primary?: boolean
 }
 
-class DialogStore {
-  open = $state(false)
+class DialogStore extends PromiseDialog<string> {
   title = $state('')
   message = $state('')
   buttons = $state<DialogButton[]>([])
 
-  #resolve: ((value: string) => void) | null = null
   #enterValue = ''
   #escValue = ''
 
@@ -41,10 +40,7 @@ class DialogStore {
     this.buttons = opts.buttons
     this.#enterValue = opts.enterValue
     this.#escValue = opts.escValue
-    this.open = true
-    return new Promise<string>((resolve) => {
-      this.#resolve = resolve
-    })
+    return this.begin()
   }
 
   /** 未保存タブ1件の保存確認（保存/保存しない/キャンセル）。 */
@@ -76,11 +72,11 @@ class DialogStore {
     }) as Promise<MissingChoice>
   }
 
-  /** インポート時、同一 ID の既存プロファイルがある場合の確認（上書き/別名で追加/キャンセル）。 */
+  /** インポート時、同名の既存スタイルがある場合の確認（上書き/別名で追加/キャンセル）。 */
   confirmImportOverwrite(name: string): Promise<ImportOverwriteChoice> {
     return this.#show({
-      title: 'プロファイルの上書き確認',
-      message: `既に「${name}」が存在します。上書きしますか？\n「別名で追加」を選ぶと、別のプロファイルとして取り込みます。`,
+      title: 'スタイルの上書き確認',
+      message: `既に「${name}」が存在します。上書きしますか？\n「別名で追加」を選ぶと、別のスタイルとして取り込みます。`,
       buttons: [
         { label: '上書き', value: 'overwrite', primary: true },
         { label: '別名で追加', value: 'addNew' },
@@ -104,10 +100,7 @@ class DialogStore {
 
   /** ボタン選択時に呼ぶ。モーダルを閉じて Promise を解決する。 */
   choose(value: string): void {
-    this.open = false
-    const resolve = this.#resolve
-    this.#resolve = null
-    resolve?.(value)
+    this.finish(value)
   }
 }
 

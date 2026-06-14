@@ -2,7 +2,7 @@ import type { Tab, EditorMode } from './tabs'
 
 // タブ（＝開いているドキュメント）の状態ストア（Svelte 5 runes）。
 // 設計: docs/アーキテクチャ・画面設計.md §2, §5。
-// step3 時点ではメモリ上のみ。ファイル読み書き（Go バインディング）は step4 で接続する。
+// ファイル読み書きは Go バインディング（api/wails）経由で commands から行う。
 
 let counter = 0
 function nextId(): string {

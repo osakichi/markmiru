@@ -5,6 +5,7 @@
   import { tabsStore } from '../stores/tabs.svelte'
   import { getEditorView } from '../editorBridge'
   import { viewFind } from '../viewFind.svelte'
+  import { selectElementContents } from '../dom'
   import { clipboardGetText, clipboardSetText } from '../api/wails'
 
   // 両モード（閲覧 .markdown-body / 編集 .cm-editor）の右クリックメニュー。
@@ -88,13 +89,7 @@
   }
 
   function selectAllPreview(): void {
-    const el = document.querySelector('.markdown-body')
-    if (!el) return
-    const range = document.createRange()
-    range.selectNodeContents(el)
-    const sel = window.getSelection()
-    sel?.removeAllRanges()
-    sel?.addRange(range)
+    selectElementContents(document.querySelector('.markdown-body'))
   }
 
   function buildItems(e: MouseEvent): MenuItem[] {
@@ -197,7 +192,7 @@
 <style>
   .cm-menu {
     position: fixed;
-    z-index: 1200;
+    z-index: var(--z-context-menu);
     min-width: 160px;
     padding: 0.25rem;
     background: #ffffff;

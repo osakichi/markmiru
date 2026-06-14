@@ -5,7 +5,8 @@
   import { styleToVars, varsToStyleString } from '../style/styleDef'
   import { tabsStore } from '../stores/tabs.svelte'
   import { uiStore } from '../stores/ui.svelte'
-  import { riskyDialog } from '../riskyDialog.svelte'
+  import { askRemoteImages } from '../commands'
+  import { selectElementContents } from '../dom'
   import { viewFind } from '../viewFind.svelte'
   import '../styles/markdown.css'
 
@@ -37,12 +38,7 @@
 
   // 本文のみを選択する（右クリックメニュー「すべて選択」および Ctrl+A と共通）。
   function selectAllBody(): void {
-    if (!container) return
-    const range = document.createRange()
-    range.selectNodeContents(container)
-    const sel = window.getSelection()
-    sel?.removeAllRanges()
-    sel?.addRange(range)
+    selectElementContents(container)
   }
 
   // 閲覧モードのコピーは書式を捨てプレーンテキストのみにする（メニューのコピーと挙動を揃える）。
@@ -231,12 +227,7 @@
     if (confirmingId === id) return
     confirmingId = id
     try {
-      const ok = await riskyDialog.confirm({
-        title: '外部画像の読み込み確認',
-        message: `「${fileName || '無題'}」に外部画像が含まれています。読み込みますか？`,
-        acceptLabel: '表示する',
-        rejectLabel: '表示しない'
-      })
+      const ok = await askRemoteImages(fileName)
       tabsStore.setRemoteImagePolicy(id, ok ? 'allow' : 'block')
     } finally {
       confirmingId = null
@@ -282,7 +273,7 @@
     position: absolute;
     top: 0.5rem;
     right: 1rem;
-    z-index: 50;
+    z-index: var(--z-find-bar);
     display: flex;
     align-items: center;
     gap: 0.25rem;
